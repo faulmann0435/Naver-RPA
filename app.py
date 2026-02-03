@@ -316,7 +316,7 @@ def main():
         "전화번호": df["구매자연락처"].values,
         "주소": df["통합배송지"].values,
         "구분": df["processed_option"].values,
-        "수량(공란)": "",
+        "수량": 1,
         "배송메세지": df["배송메세지"].values,
         "보내는사람": SENDER_NAME,
         "보내는분 전화": SENDER_PHONE,
