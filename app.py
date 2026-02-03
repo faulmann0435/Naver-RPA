@@ -310,17 +310,17 @@ def main():
     st.write("옵션 규칙 적용 중...")
     df["processed_option"] = df.apply(process_option, axis=1)
 
-    # Sokcho form: A~I with hardcoded E, H, I
+    # Sokcho form: A~I with updated column order
     out = pd.DataFrame({
         "받는사람": df["수취인명"].values,
         "전화번호": df["구매자연락처"].values,
         "주소": df["통합배송지"].values,
         "구분": df["processed_option"].values,
+        "수량(공란)": "",
+        "배송메세지": df["배송메세지"].values,
         "보내는사람": SENDER_NAME,
-        "배송메시지": df["배송메세지"].values,
-        "공란": "",
-        "발신전화": SENDER_PHONE,
-        "보내는분주소": SENDER_ADDRESS,
+        "보내는분 전화": SENDER_PHONE,
+        "보내는분주소(전체, 분할)": SENDER_ADDRESS,
     })
 
     st.subheader("속초 발주양식 미리보기 (상위 5행)")
