@@ -51,7 +51,8 @@ def ensure_quantity_column(df):
 
 def process_option(row):
     """
-    Refined rules: Pre-cleaning, 장어 handling, 마리 fix, 멍게/units/special, item suffixes, fallback.
+    Refined rules: Pre-cleaning, 장어 (parentheses + 500g mask), GENERAL weight conversion (all products),
+    마리, 멍게/units/special, item suffixes, fallback.
     Uses row['상품명'], row['옵션정보'], row['수량'].
     """
     product = str(row.get("상품명", "") or "")
@@ -67,7 +68,7 @@ def process_option(row):
         raw_option = ""
     text = str(raw_option).strip()
 
-    # ----- Step 1: Pre-Cleaning (Rules 5, 6, 7) -----
+    # ----- Step 1: Pre-Cleaning -----
     text = re.sub(r"^\d+(?:-\d+)?[\.\)]\s*", "", text)
     for w in ["특가", "사이즈"]:
         text = text.replace(w, "")
@@ -83,27 +84,31 @@ def process_option(row):
 
     qty_applied = False
 
-    # ----- Step 2: Specific Item - Eel (장어) -----
+    # ----- Step 2: Eel (장어) Special Handling -----
     if "장어" in text or "장어" in product:
         text = re.sub(r"\(.*?\)", "", text)
         text = re.sub(r"\s+", " ", text).strip()
-        # 500g exception: keep as "500g", do not convert to kg
         text = text.replace("500g", "__500G__")
-        def _g_to_kg(m):
-            nonlocal qty_applied
-            num = float(m.group(1))
-            u = m.group(2).lower()
-            if u == "g":
-                kg = num / 1000.0
-            else:
-                kg = num
-            total = kg * qty
-            qty_applied = True
-            return f"{int(total)}kg" if total == int(total) else f"{total:.1f}kg"
-        text = re.sub(r"(\d+(?:\.\d+)?)\s*(kg|KG|Kg|g|G)", _g_to_kg, text)
-        text = text.replace("__500G__", "500g")
 
-    # ----- Step 3: Unit Calculation - 마리 (Critical Fix) -----
+    # ----- Step 3: GENERAL Weight Conversion (apply to ALL products) -----
+    def _g_to_kg(m):
+        nonlocal qty_applied
+        num = float(m.group(1))
+        u = m.group(2).lower()
+        if u == "g":
+            kg = num / 1000.0
+        else:
+            kg = num
+        total = kg * qty
+        qty_applied = True
+        return f"{int(total)}kg" if total == int(total) else f"{total:.1f}kg"
+
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*(kg|KG|Kg|g|G)", _g_to_kg, text)
+
+    # ----- Step 4: Eel Unmasking -----
+    text = text.replace("__500G__", "500g")
+
+    # ----- Step 5: "마리" Unit -----
     def _mari_repl(m):
         nonlocal qty_applied
         n = int(m.group(1)) * qty
@@ -112,7 +117,7 @@ def process_option(row):
 
     text = re.sub(r"(\d+)\s*마리", _mari_repl, text)
 
-    # ----- Step 4: 멍게 (Rule 8), Standard Units, Special -----
+    # ----- Step 6: Standard Units & Special Groups -----
     if "멍게" in text:
         if re.search(r"\d+\s*kg", text):
             qty_applied = True
@@ -133,7 +138,7 @@ def process_option(row):
         qty_applied = True
         return text.strip()
 
-    # ----- Step 5: Item Suffixes (Rule 1) -----
+    # ----- Step 7: Suffixes & Fallback -----
     item_keywords = ["무침", "소스", "젓갈"]
     extra = []
     for kw in item_keywords:
@@ -145,7 +150,6 @@ def process_option(row):
         text = re.sub(r"\s*/\s*무침\s*$", "", text)
         text = re.sub(r"무침\s*1개", "무침", text)
 
-    # ----- Step 6: Fallback -----
     if not qty_applied:
         text = text.strip() + f" {qty}개"
 
