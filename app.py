@@ -336,16 +336,17 @@ def main():
         st.info("결제일 컬럼이 없어 정렬하지 않았습니다. 결제일이 있으면 오래된 주문부터 정렬됩니다.")
 
     phone_col = "수취인연락처1" if "수취인연락처1" in merged.columns else "구매자연락처"
+    n = len(merged)
     out = pd.DataFrame({
         "받는사람": merged["수취인명"].values,
         "전화번호": merged[phone_col].values,
         "주소": merged["통합배송지"].values,
         "구분": merged["processed_option"].values,
-        "보내는사람": SENDER_NAME,
+        "수량": [1] * n,
         "배송메시지": merged["배송메세지"].values,
-        "(공란)": "",
-        "전화번호(확인)": SENDER_PHONE,
-        "보내는분주소(전체, 분할)": SENDER_ADDRESS,
+        "보내는사람": [SENDER_NAME] * n,
+        "전화번호(확인)": [SENDER_PHONE] * n,
+        "보내는분주소": [SENDER_ADDRESS] * n,
     })
 
     st.subheader("속초 발주양식 미리보기 (상위 5행)")
